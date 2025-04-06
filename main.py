@@ -11,6 +11,8 @@ import os
 import sys
 
 
+
+
 def resource_path(relative_path):
     """
     Get absolute path to resource, works for dev and for PyInstaller.
@@ -43,6 +45,30 @@ def resource_path(relative_path):
         print(f"Error in resource_path: {e}")
         # Fallback to current directory
         return os.path.join(os.path.abspath("."), relative_path)
+
+
+ #updating passkey generation coupon upon every click
+def generate_new_password():
+    """Generates a password using a deterministic but hard-to-reverse algorithm."""
+    # Secret key (change this to your own number)
+    SECRET_KEY = 12345
+    
+    # Get current date as YYYYMMDD
+    today = datetime.now().strftime("%Y%S%M")
+    date_digits = [int(c) for c in today]  # Convert to list of digits
+    
+    # Multiply each digit by the secret key and take modulo 10
+    shifted_digits = [(d * SECRET_KEY) % 10 for d in date_digits]
+    
+    # Take the first 4 digits
+    code_part = ''.join(map(str, shifted_digits[:4]))
+    
+    # Calculate checksum (sum of all date digits, modulo 10)
+    checksum = sum(date_digits) % 10
+    
+    # Final password format: DDDD-X
+    return f"{code_part}-{checksum}"
+
 
 load_dotenv()
 COUPON_FILE = resource_path("fuffin.json")
@@ -288,7 +314,13 @@ class CouponManager(QtWidgets.QWidget):
             return days
         return None
     
+    
+
+
+
     def generate_coupon(self):
+        global GENERATION_PASSWORD 
+
         if not self.authenticate(GENERATION_PASSWORD, "Generate Coupon Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
@@ -334,9 +366,28 @@ class CouponManager(QtWidgets.QWidget):
         save_coupons(coupons)
         self.update_coupon_list()
         self.update_statistics()
+
+        # setting new password for generate btn
+        new_password = generate_new_password()
+        os.environ["GEN_PASS"] = new_password
+        GENERATION_PASSWORD = new_password
+
+        #save new pass to .env file
+        with open(resource_path(".env"),"w") as env_file:
+            env_file.write(f"GEN_PASS={new_password}\n")
+            if "PASSWORD" in os.environ:
+                env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
+        
+        QtWidgets.QMessageBox.information(self,"Generate Password changed", "your coupon generatin button has been locked.Contact: +91 9014190770 to unlock")
+        
         
         # Ask to share the generated coupons
         self.ask_to_share(generated_coupons)
+        
+       
+
+      
+
 
     def generate_10_coupons(self):
         if not self.authenticate(GENERATION_PASSWORD, "Generate 10 Coupons Authentication"):
@@ -376,6 +427,21 @@ class CouponManager(QtWidgets.QWidget):
         save_coupons(coupons)
         self.update_coupon_list()
         self.update_statistics()
+
+         # setting new password for generate btn
+        new_password = generate_new_password()
+        os.environ["GEN_PASS"] = new_password
+        GENERATION_PASSWORD = new_password
+
+        #save new pass to .env file
+        with open(resource_path(".env"),"w") as env_file:
+            env_file.write(f"GEN_PASS={new_password}\n")
+            if "PASSWORD" in os.environ:
+                env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
+
+        QtWidgets.QMessageBox.information(self,"Generate Password changed", "your coupon generatin button has been locked.Contact: +91 9014190770 to unlock")
+
+
         self.ask_to_share(new_coupons)
 
     def filter_coupons(self):
