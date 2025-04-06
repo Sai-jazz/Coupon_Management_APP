@@ -54,7 +54,7 @@ def generate_new_password():
     SECRET_KEY = 12345
     
     # Get current date as YYYYMMDD
-    today = datetime.now().strftime("%Y%S%M")
+    today = datetime.now().strftime("%M%S%Y")
     date_digits = [int(c) for c in today]  # Convert to list of digits
     
     # Multiply each digit by the secret key and take modulo 10
@@ -378,7 +378,7 @@ class CouponManager(QtWidgets.QWidget):
             if "PASSWORD" in os.environ:
                 env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
         
-        QtWidgets.QMessageBox.information(self,"Generate Password changed", "your coupon generatin button has been locked.Contact: +91 9014190770 to unlock")
+        QtWidgets.QMessageBox.information(self,"Generate BUTTON Password changed", "your COUPON GENERATE BUTTON HAS BEEN USED.\nContact: +91 9014190770 to GET NEW PASSWORD")
         
         
         # Ask to share the generated coupons
@@ -439,7 +439,7 @@ class CouponManager(QtWidgets.QWidget):
             if "PASSWORD" in os.environ:
                 env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
 
-        QtWidgets.QMessageBox.information(self,"Generate Password changed", "your coupon generatin button has been locked.Contact: +91 9014190770 to unlock")
+        QtWidgets.QMessageBox.information(self,"Generate BUTTON Password changed", "your COUPON GENERATE BUTTON HAS BEEN USED.\nContact: +91 9014190770 to GET NEW PASSWORD")
 
 
         self.ask_to_share(new_coupons)
