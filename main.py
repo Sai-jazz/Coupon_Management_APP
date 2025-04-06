@@ -390,6 +390,7 @@ class CouponManager(QtWidgets.QWidget):
 
 
     def generate_10_coupons(self):
+        global GENERATION_PASSWORD
         if not self.authenticate(GENERATION_PASSWORD, "Generate 10 Coupons Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
@@ -427,7 +428,7 @@ class CouponManager(QtWidgets.QWidget):
         save_coupons(coupons)
         self.update_coupon_list()
         self.update_statistics()
-
+        
          # setting new password for generate btn
         new_password = generate_new_password()
         os.environ["GEN_PASS"] = new_password
