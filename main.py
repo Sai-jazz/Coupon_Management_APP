@@ -46,6 +46,24 @@ def resource_path(relative_path):
         # Fallback to current directory
         return os.path.join(os.path.abspath("."), relative_path)
 
+def log_password_change():
+    """Log the timestamp when the generation password is changed."""
+    try:
+        filename = resource_path("password_change_log.csv")
+        file_exists = os.path.isfile(filename)
+        
+        with open(filename, "a", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow(["Timestamp"])
+            
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            writer.writerow([timestamp])
+            
+        return True
+    except Exception as e:
+        print(f"Error logging password change: {e}")
+        return False
 
  #updating passkey generation coupon upon every click
 def generate_new_password():
@@ -54,7 +72,7 @@ def generate_new_password():
     SECRET_KEY = 12345
     
     # Get current date as YYYYMMDD
-    today = datetime.now().strftime("%M%S%Y")
+    today = datetime.now().strftime("%M%H%Y")
     date_digits = [int(c) for c in today]  # Convert to list of digits
     
     # Multiply each digit by the secret key and take modulo 10
@@ -378,6 +396,7 @@ class CouponManager(QtWidgets.QWidget):
             if "PASSWORD" in os.environ:
                 env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
         
+        log_password_change() #timestamp to know the pass
         QtWidgets.QMessageBox.information(self,"Generate BUTTON Password changed", "your COUPON GENERATE BUTTON HAS BEEN USED.\nContact: +91 9014190770 to GET NEW PASSWORD")
         
         
@@ -439,7 +458,7 @@ class CouponManager(QtWidgets.QWidget):
             env_file.write(f"GEN_PASS={new_password}\n")
             if "PASSWORD" in os.environ:
                 env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
-
+        log_password_change()
         QtWidgets.QMessageBox.information(self,"Generate BUTTON Password changed", "your COUPON GENERATE BUTTON HAS BEEN USED.\nContact: +91 9014190770 to GET NEW PASSWORD")
 
 
