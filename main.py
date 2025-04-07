@@ -198,15 +198,15 @@ class CouponManager(QtWidgets.QWidget):
         self.generate_btn.adjustSize()
         
         
-        self.generate_10_btn = QtWidgets.QPushButton("Generate 10 Coupons", self)
-        self.generate_10_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
-        self.generate_10_btn.clicked.connect(self.generate_10_coupons)
+        self.generate_20_btn = QtWidgets.QPushButton("Generate 20 Coupons", self)
+        self.generate_20_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
+        self.generate_20_btn.clicked.connect(self.generate_20_coupons)
        
 
       
         h1_layout = QtWidgets.QHBoxLayout() #create horizontal layout
         h1_layout.addWidget(self.generate_btn)
-        h1_layout.addWidget(self.generate_10_btn) 
+        h1_layout.addWidget(self.generate_20_btn) 
 
         self.group_box1.setLayout(h1_layout) #set layout for group box
         self.layout.addWidget(self.group_box1)
@@ -344,7 +344,7 @@ class CouponManager(QtWidgets.QWidget):
             return
 
         # Ask for the number of coupons to generate
-        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=10, value=1)
+        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=20, value=1)
         if not ok or num_coupons < 1:
             return  # User canceled or entered an invalid number
 
@@ -408,9 +408,9 @@ class CouponManager(QtWidgets.QWidget):
       
 
 
-    def generate_10_coupons(self):
+    def generate_20_coupons(self):
         global GENERATION_PASSWORD
-        if not self.authenticate(GENERATION_PASSWORD, "Generate 10 Coupons Authentication"):
+        if not self.authenticate(GENERATION_PASSWORD, "Generate 20 Coupons Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
         
@@ -434,7 +434,7 @@ class CouponManager(QtWidgets.QWidget):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         expiry_date = (datetime.now() + timedelta(days=expiry_days)).strftime("%Y-%m-%d %H:%M:%S")
         new_coupons = []
-        for _ in range(10):
+        for _ in range(20):
             coupon_code = str(uuid.uuid4())[:8].upper()
             coupons[coupon_code] = {
                 "status": "Valid", 
