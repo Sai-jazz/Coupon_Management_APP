@@ -11,8 +11,6 @@ import os
 import sys
 
 
-
-
 def resource_path(relative_path):
     """
     Get absolute path to resource, works for dev and for PyInstaller.
@@ -46,6 +44,37 @@ def resource_path(relative_path):
         # Fallback to current directory
         return os.path.join(os.path.abspath("."), relative_path)
 
+def save_env_file(new_password):
+    """Save the environment variables to the .env file."""
+    try:
+        env_path = resource_path(".env")
+        
+        # Get existing content (if any)
+        existing_content = {}
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                for line in f:
+                    if "=" in line:
+                        key, value = line.strip().split("=", 1)
+                        existing_content[key] = value
+        
+        # Update the generation password
+        existing_content["GEN_PASS"] = new_password
+        
+        # Preserve other important variables
+        if "PASSWORD" not in existing_content and "PASSWORD" in os.environ:
+            existing_content["PASSWORD"] = os.environ["PASSWORD"]
+        
+        # Write back to file
+        with open(env_path, "w") as f:
+            for key, value in existing_content.items():
+                f.write(f"{key}={value}\n")
+                
+        return True
+    except Exception as e:
+        print(f"Error saving .env file: {e}")
+        return False
+
 def log_password_change():
     """Log the timestamp when the generation password is changed."""
     try:
@@ -65,34 +94,11 @@ def log_password_change():
         print(f"Error logging password change: {e}")
         return False
 
- #updating passkey generation coupon upon every click
-def generate_new_password():
-    """Generates a password using a deterministic but hard-to-reverse algorithm."""
-    # Secret key (change this to your own number)
-    SECRET_KEY = 12345
-    
-    # Get current date as YYYYMMDD
-    today = datetime.now().strftime("%M%H%Y")
-    date_digits = [int(c) for c in today]  # Convert to list of digits
-    
-    # Multiply each digit by the secret key and take modulo 10
-    shifted_digits = [(d * SECRET_KEY) % 10 for d in date_digits]
-    
-    # Take the first 4 digits
-    code_part = ''.join(map(str, shifted_digits[:4]))
-    
-    # Calculate checksum (sum of all date digits, modulo 10)
-    checksum = sum(date_digits) % 10
-    
-    # Final password format: DDDD-X
-    return f"{code_part}-{checksum}"
-
-
 load_dotenv()
 COUPON_FILE = resource_path("fuffin.json")
 PASSWORD = os.getenv("PASSWORD")  # Set your password here
 GENERATION_PASSWORD = os.getenv("GEN_PASS")  # Set your password for generating coupons
-# Load or initialize coupon data
+
 def load_coupons():
     try:
         with open(COUPON_FILE, "r") as file:
@@ -131,8 +137,6 @@ def save_customer_details(coupon_code, customer_name, phone_number):
         print(f"Error saving customer details: {e}")
         return False
 
-
-
 class CouponManager(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -140,17 +144,12 @@ class CouponManager(QtWidgets.QWidget):
         if not self.authenticate(PASSWORD, "Authentication"):
             QtWidgets.QMessageBox.critical(self, "Access Denied", "Incorrect password! Exiting...")
             raise SystemExit
-        
-            
-          
         else:
             self.init_ui()
     
     def authenticate(self, required_password, title):
         password, ok = QtWidgets.QInputDialog.getText(self, title, "Enter Password:", QtWidgets.QLineEdit.Password)
         return ok and password == required_password
-      
-    
     
     def init_ui(self):
         self.setWindowTitle("Coupon Manager")
@@ -172,7 +171,6 @@ class CouponManager(QtWidgets.QWidget):
         self.search_layout.addWidget(self.search_entry)
         self.layout.addLayout(self.search_layout)
         
-        
         # Coupon Entry and Validation
         self.entry_layout = QtWidgets.QHBoxLayout()
         self.coupon_entry = QtWidgets.QLineEdit(self)
@@ -188,7 +186,6 @@ class CouponManager(QtWidgets.QWidget):
         self.entry_layout.addWidget(self.validate_btn)
         self.layout.addLayout(self.entry_layout)
         
-
         self.group_box1 = QtWidgets.QGroupBox("Generate",self) #generate groupbox
        
         # Buttons for Actions
@@ -197,13 +194,10 @@ class CouponManager(QtWidgets.QWidget):
         self.generate_btn.clicked.connect(self.generate_coupon)
         self.generate_btn.adjustSize()
         
-        
         self.generate_20_btn = QtWidgets.QPushButton("Generate 20 Coupons", self)
         self.generate_20_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
         self.generate_20_btn.clicked.connect(self.generate_20_coupons)
        
-
-      
         h1_layout = QtWidgets.QHBoxLayout() #create horizontal layout
         h1_layout.addWidget(self.generate_btn)
         h1_layout.addWidget(self.generate_20_btn) 
@@ -212,9 +206,6 @@ class CouponManager(QtWidgets.QWidget):
         self.layout.addWidget(self.group_box1)
         self.setLayout(self.layout)
       
-
-
-        
         self.share_selected_btn = QtWidgets.QPushButton("Share Selected Coupons", self)
         self.share_selected_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
         self.share_selected_btn.clicked.connect(self.share_selected_coupons)
@@ -241,21 +232,16 @@ class CouponManager(QtWidgets.QWidget):
         }
     """
         
-       
         self.group_box2 = QtWidgets.QGroupBox("Remove",self) #generate groupbox
-
 
         self.remove_used_btn = QtWidgets.QPushButton("Remove Used and expired ", self)
         self.remove_used_btn.setFixedSize(180, 40)  # Width: 150px, Height: 40px
         self.remove_used_btn.clicked.connect(self.remove_used_coupons)
         
-        
         self.remove_unshared_btn = QtWidgets.QPushButton("Remove Unshared Coupons", self)
         self.remove_unshared_btn.setFixedSize(250, 40)  # Width: 150px, Height: 40px
         self.remove_unshared_btn.clicked.connect(self.remove_unshared_coupons)
         
-       
-
         h2_layout = QtWidgets.QHBoxLayout() #create horizontal layout
         h2_layout.addWidget(self.remove_used_btn)
         h2_layout.addWidget(self.remove_unshared_btn) 
@@ -264,8 +250,6 @@ class CouponManager(QtWidgets.QWidget):
         self.layout.addWidget(self.group_box2) #add goupbox to the main layout
         self.setLayout(self.layout)
 
-
-        
         self.export_csv_btn = QtWidgets.QPushButton("Export to CSV", self)
         self.export_csv_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
         self.export_csv_btn.clicked.connect(self.export_to_csv)
@@ -294,13 +278,11 @@ class CouponManager(QtWidgets.QWidget):
         )
         #styling the buttons
         self.remove_unshared_btn.setStyleSheet(button_style)
-        #styling the buttons
         
         #set image path
         self.refresh_btn.setFixedSize(40, 40)
         self.refresh_btn.clicked.connect(self.refresh_data)  # Calls refresh method
         self.layout.addWidget(self.refresh_btn)
-
         
         # Statistics Display
         self.stats_label = QtWidgets.QLabel("Statistics: Valid - 0 | Used - 0 | Expired - 0")
@@ -332,13 +314,7 @@ class CouponManager(QtWidgets.QWidget):
             return days
         return None
     
-    
-
-
-
     def generate_coupon(self):
-        global GENERATION_PASSWORD 
-
         if not self.authenticate(GENERATION_PASSWORD, "Generate Coupon Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
@@ -384,32 +360,11 @@ class CouponManager(QtWidgets.QWidget):
         save_coupons(coupons)
         self.update_coupon_list()
         self.update_statistics()
-
-        # setting new password for generate btn
-        new_password = generate_new_password()
-        os.environ["GEN_PASS"] = new_password
-        GENERATION_PASSWORD = new_password
-
-        #save new pass to .env file
-        with open(resource_path(".env"),"w") as env_file:
-            env_file.write(f"GEN_PASS={new_password}\n")
-            if "PASSWORD" in os.environ:
-                env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
-        
-        log_password_change() #timestamp to know the pass
-        QtWidgets.QMessageBox.information(self,"Generate BUTTON Password changed", "your COUPON GENERATE BUTTON HAS BEEN USED.\nContact: +91 9014190770 to GET NEW PASSWORD")
-        
         
         # Ask to share the generated coupons
         self.ask_to_share(generated_coupons)
-        
-       
-
-      
-
 
     def generate_20_coupons(self):
-        global GENERATION_PASSWORD
         if not self.authenticate(GENERATION_PASSWORD, "Generate 20 Coupons Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
@@ -447,20 +402,6 @@ class CouponManager(QtWidgets.QWidget):
         save_coupons(coupons)
         self.update_coupon_list()
         self.update_statistics()
-        
-         # setting new password for generate btn
-        new_password = generate_new_password()
-        os.environ["GEN_PASS"] = new_password
-        GENERATION_PASSWORD = new_password
-
-        #save new pass to .env file
-        with open(resource_path(".env"),"w") as env_file:
-            env_file.write(f"GEN_PASS={new_password}\n")
-            if "PASSWORD" in os.environ:
-                env_file.write(f"PASSWORD={os.environ['PASSWORD']}\n")
-        log_password_change()
-        QtWidgets.QMessageBox.information(self,"Generate BUTTON Password changed", "your COUPON GENERATE BUTTON HAS BEEN USED.\nContact: +91 9014190770 to GET NEW PASSWORD")
-
 
         self.ask_to_share(new_coupons)
 
@@ -500,11 +441,7 @@ class CouponManager(QtWidgets.QWidget):
                 coupons[code]["shared"] = True
         save_coupons(coupons)
         self.update_coupon_list()
-        
     
-    
-    
-
     def validate_coupon(self):
         code = self.coupon_entry.text().strip().upper()
         if code in coupons:
@@ -591,7 +528,6 @@ class CouponManager(QtWidgets.QWidget):
 
             QtWidgets.QMessageBox.information(self, "Cleanup", "All used and expired coupons have been removed.")
 
-    
     def remove_unshared_coupons(self):
         selected_coupons = []
         for item in self.coupon_list.selectedItems():
@@ -604,7 +540,6 @@ class CouponManager(QtWidgets.QWidget):
     
         global coupons
        
-
         for code in selected_coupons:
             if code in coupons and not coupons[code]["shared"]:
               del coupons[code]
@@ -652,12 +587,10 @@ class CouponManager(QtWidgets.QWidget):
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Export Failed", f"An error occurred: {str(e)}")
 
-
     def refresh_data(self):
         self.update_coupon_list()
         self.update_statistics()
            
-    
     def share_selected_coupons(self):
         selected_coupons = []
         for item in self.coupon_list.selectedItems():
@@ -679,7 +612,6 @@ class CouponManager(QtWidgets.QWidget):
                     break
             self.coupon_list.setRowHidden(row, not match)
     
-
     def autocheck_expiry(self,code):
         if coupons[code]["status"] == "Valid":
                 if datetime.now() <= datetime.strptime(coupons[code]["expiry"], "%Y-%m-%d %H:%M:%S"):
@@ -705,7 +637,6 @@ class CouponManager(QtWidgets.QWidget):
             self.coupon_list.setItem(row, 3, QtWidgets.QTableWidgetItem(data["expiry"]))
             self.coupon_list.setItem(row, 4, QtWidgets.QTableWidgetItem("Yes" if data["shared"] else "No"))
             self.coupon_list.setItem(row,5,QtWidgets.QTableWidgetItem(data.get("type","regular")))
-
 
             # Set row color based on status and expiry
             if data["status"] == "Used":
@@ -734,4 +665,4 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     window = CouponManager()
     window.show()
-    app.exec_()                                                                                                                             
+    app.exec_()
