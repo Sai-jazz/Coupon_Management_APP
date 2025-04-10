@@ -207,13 +207,13 @@ class CouponManager(QtWidgets.QWidget):
         self.generate_btn.clicked.connect(self.generate_coupon)
         self.generate_btn.adjustSize()
         
-        self.generate_20_btn = QtWidgets.QPushButton("Generate 20 Coupons", self)
-        self.generate_20_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
-        self.generate_20_btn.clicked.connect(self.generate_20_coupons)
+        self.generate_50_btn = QtWidgets.QPushButton("Generate 50 Coupons", self)
+        self.generate_50_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
+        self.generate_50_btn.clicked.connect(self.generate_50_coupons)
        
         h1_layout = QtWidgets.QHBoxLayout() #create horizontal layout
         h1_layout.addWidget(self.generate_btn)
-        h1_layout.addWidget(self.generate_20_btn) 
+        h1_layout.addWidget(self.generate_50_btn) 
 
         self.group_box1.setLayout(h1_layout) #set layout for group box
         self.layout.addWidget(self.group_box1)
@@ -335,7 +335,7 @@ class CouponManager(QtWidgets.QWidget):
             return
 
         # Ask for the number of coupons to generate
-        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=100, value=1)
+        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=50, value=50)
         if not ok or num_coupons < 1:
             return  # User canceled or entered an invalid number
 
@@ -389,10 +389,10 @@ class CouponManager(QtWidgets.QWidget):
         GENERATION_PASSWORD = new_pass
        
 
-    def generate_20_coupons(self):
+    def generate_50_coupons(self):
         global GENERATION_PASSWORD
         
-        if not self.authenticate(GENERATION_PASSWORD, "Generate 20 Coupons Authentication"):
+        if not self.authenticate(GENERATION_PASSWORD, "Generate 50 Coupons Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
         
@@ -416,7 +416,7 @@ class CouponManager(QtWidgets.QWidget):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         expiry_date = (datetime.now() + timedelta(days=expiry_days)).strftime("%Y-%m-%d %H:%M:%S")
         new_coupons = []
-        for _ in range(20):
+        for _ in range(50):
             coupon_code = str(uuid.uuid4())[:8].upper()
             coupons[coupon_code] = {
                 "status": "Valid", 
@@ -434,7 +434,7 @@ class CouponManager(QtWidgets.QWidget):
 
         #new passkey
         new_pass = generate_new_password()
-        log_button_press("Generate 20 Coupons")
+        log_button_press("Generate 50 Coupons")
         if not update_env_file(new_pass):
             QtWidgets.QMessageBox.warning(self,"Error","Failed to update genaration password")
 
