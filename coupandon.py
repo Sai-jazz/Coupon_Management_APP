@@ -22,7 +22,7 @@ def resource_path(relative_path):
         # Handle PyInstaller bundled case
         if getattr(sys, 'frozen', False):
             # For data files that need to be writable (like JSON)
-            if relative_path.endswith('.json'):
+            if relative_path.endswith('.json') or relative_path.endswith('.csv'):
                 # Use the directory where the executable resides
                 base_path = os.path.dirname(sys.executable)
             else:
@@ -33,7 +33,7 @@ def resource_path(relative_path):
             base_path = os.path.abspath(".")
         
         # Create directory if it doesn't exist (only for JSON/data files)
-        if relative_path.endswith('.json'):
+        if relative_path.endswith('.json') or relative_path.endswith('.csv'):
             os.makedirs(base_path, exist_ok=True)
         
         full_path = os.path.join(base_path, relative_path)
@@ -44,55 +44,7 @@ def resource_path(relative_path):
         # Fallback to current directory
         return os.path.join(os.path.abspath("."), relative_path)
 
-def save_env_file(new_password):
-    """Save the environment variables to the .env file."""
-    try:
-        env_path = resource_path(".env")
-        
-        # Get existing content (if any)
-        existing_content = {}
-        if os.path.exists(env_path):
-            with open(env_path, "r") as f:
-                for line in f:
-                    if "=" in line:
-                        key, value = line.strip().split("=", 1)
-                        existing_content[key] = value
-        
-        # Update the generation password
-        existing_content["GEN_PASS"] = new_password
-        
-        # Preserve other important variables
-        if "PASSWORD" not in existing_content and "PASSWORD" in os.environ:
-            existing_content["PASSWORD"] = os.environ["PASSWORD"]
-        
-        # Write back to file
-        with open(env_path, "w") as f:
-            for key, value in existing_content.items():
-                f.write(f"{key}={value}\n")
-                
-        return True
-    except Exception as e:
-        print(f"Error saving .env file: {e}")
-        return False
 
-def log_password_change():
-    """Log the timestamp when the generation password is changed."""
-    try:
-        filename = resource_path("password_change_log.csv")
-        file_exists = os.path.isfile(filename)
-        
-        with open(filename, "a", newline="", encoding="utf-8") as file:
-            writer = csv.writer(file)
-            if not file_exists:
-                writer.writerow(["Timestamp"])
-            
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            writer.writerow([timestamp])
-            
-        return True
-    except Exception as e:
-        print(f"Error logging password change: {e}")
-        return False
 
 load_dotenv()
 COUPON_FILE = resource_path("fuffin.json")
@@ -122,7 +74,8 @@ def save_customer_details(coupon_code, customer_name, phone_number):
     """Save customer details to a CSV file."""
     try:
         filename = resource_path("customer_details.csv")
-        file_exists = os.path.isfile(filename)
+        os.makedirs(os.path.dirname(filename) or '.',exist_ok=True)
+        file_exists = os.path.isfile(filename) and os.path.getsize(filename) > 0
         
         with open(filename, "a", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
@@ -320,7 +273,7 @@ class CouponManager(QtWidgets.QWidget):
             return
 
         # Ask for the number of coupons to generate
-        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=20, value=1)
+        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=100, value=1)
         if not ok or num_coupons < 1:
             return  # User canceled or entered an invalid number
 
