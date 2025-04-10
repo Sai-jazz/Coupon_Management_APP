@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
 import sys
+from genpass import generate_new_password
 
 
 def resource_path(relative_path):
@@ -22,7 +23,8 @@ def resource_path(relative_path):
         # Handle PyInstaller bundled case
         if getattr(sys, 'frozen', False):
             # For data files that need to be writable (like JSON)
-            if relative_path.endswith('.json') or relative_path.endswith('.csv'):
+            if (relative_path.endswith('.json') or relative_path.endswith('.csv') or 
+            relative_path.endswith('.env')):
                 # Use the directory where the executable resides
                 base_path = os.path.dirname(sys.executable)
             else:
@@ -33,7 +35,8 @@ def resource_path(relative_path):
             base_path = os.path.abspath(".")
         
         # Create directory if it doesn't exist (only for JSON/data files)
-        if relative_path.endswith('.json') or relative_path.endswith('.csv'):
+        if (relative_path.endswith('.json') or relative_path.endswith('.csv') or 
+            relative_path.endswith('.env')):
             os.makedirs(base_path, exist_ok=True)
         
         full_path = os.path.join(base_path, relative_path)
@@ -43,6 +46,63 @@ def resource_path(relative_path):
         print(f"Error in resource_path: {e}")
         # Fallback to current directory
         return os.path.join(os.path.abspath("."), relative_path)
+
+
+def log_button_press(button_name):
+    """Log button presses with timestamp to a CSV file."""
+    try:
+        filename = resource_path("button_logs.csv")
+        os.makedirs(os.path.dirname(filename) or '.', exist_ok=True)
+        file_exists = os.path.isfile(filename) and os.path.getsize(filename) > 0
+        
+        with open(filename, "a", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            if not file_exists:
+                writer.writerow(["Button Name", "Timestamp"])
+            
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            writer.writerow([button_name, timestamp])
+            
+        return True
+    except Exception as e:
+        print(f"Error logging button press: {e}")
+        return False
+
+
+def update_env_file(new_gen_pass):
+    """Update the GEN_PASS in the .env file."""
+    try:
+        env_path = resource_path(".env")
+        # Read existing .env file
+        if os.path.exists(env_path):
+            with open(env_path, "r") as file:
+                lines = file.readlines()
+        else:
+            lines = []
+        
+        # Update or add GEN_PASS line
+        updated = False
+        new_lines = []
+        for line in lines:
+            if line.startswith("GEN_PASS="):
+                new_lines.append(f"GEN_PASS={new_gen_pass}\n")
+                updated = True
+            else:
+                new_lines.append(line)
+        
+        if not updated:
+            new_lines.append(f"GEN_PASS={new_gen_pass}\n")
+        
+        # Write back to .env file
+        with open(env_path, "w") as file:
+            file.writelines(new_lines)
+        
+        # Reload environment variables
+        load_dotenv(env_path, override=True)
+        return True
+    except Exception as e:
+        print(f"Error updating .env file: {e}")
+        return False
 
 
 
@@ -268,6 +328,8 @@ class CouponManager(QtWidgets.QWidget):
         return None
     
     def generate_coupon(self):
+        global GENERATION_PASSWORD
+        
         if not self.authenticate(GENERATION_PASSWORD, "Generate Coupon Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
@@ -317,7 +379,19 @@ class CouponManager(QtWidgets.QWidget):
         # Ask to share the generated coupons
         self.ask_to_share(generated_coupons)
 
+        #new passkey
+        new_pass = generate_new_password()
+        log_button_press("Generate Coupon")
+        if not update_env_file(new_pass):
+            QtWidgets.QMessageBox.warning(self,"error","Failed to update the generation password")
+            return
+        
+        GENERATION_PASSWORD = new_pass
+       
+
     def generate_20_coupons(self):
+        global GENERATION_PASSWORD
+        
         if not self.authenticate(GENERATION_PASSWORD, "Generate 20 Coupons Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
@@ -357,6 +431,22 @@ class CouponManager(QtWidgets.QWidget):
         self.update_statistics()
 
         self.ask_to_share(new_coupons)
+
+        #new passkey
+        new_pass = generate_new_password()
+        log_button_press("Generate 20 Coupons")
+        if not update_env_file(new_pass):
+            QtWidgets.QMessageBox.warning(self,"Error","Failed to update genaration password")
+
+        
+        GENERATION_PASSWORD = new_pass
+        
+
+
+
+
+
+
 
     def filter_coupons(self):
         search_text = self.search_entry.text().strip().lower()
