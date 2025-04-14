@@ -11,6 +11,51 @@ import os
 import sys
 from genpass import generate_new_password
 
+from cryptography.fernet import Fernet
+import os
+
+# Replace this with your actual key (from step 1)
+ENCRYPTION_KEY = b'cFdQ9rtHU_JaVWqqkQjSC75fTpr2V3IJHJhFj3HQjVs='
+
+def encrypt_env_file():
+    """Encrypt the current .env file"""
+    cipher_suite = Fernet(ENCRYPTION_KEY)
+    env_path = resource_path('.env')
+    encrypted_path = resource_path('.env.enc')
+    
+    try:
+        with open(env_path, 'rb') as file:
+            file_data = file.read()
+        
+        encrypted_data = cipher_suite.encrypt(file_data)
+        
+        with open(encrypted_path, 'wb') as file:
+            file.write(encrypted_data)
+            
+        # Remove the plaintext file (optional but recommended)
+        os.remove(env_path)
+        return True
+    except Exception as e:
+        print(f"Encryption failed: {e}")
+        return False
+
+def decrypt_env_file():
+    """Decrypt the .env.enc file when needed"""
+    cipher_suite = Fernet(ENCRYPTION_KEY)
+    encrypted_path = resource_path('.env.enc')
+    
+    try:
+        with open(encrypted_path, 'rb') as file:
+            encrypted_data = file.read()
+        
+        decrypted_data = cipher_suite.decrypt(encrypted_data)
+        
+        # Only keep decrypted data in memory, don't write to disk
+        return decrypted_data.decode('utf-8')
+    except Exception as e:
+        print(f"Decryption failed: {e}")
+        return None
+
 
 def resource_path(relative_path):
     """
@@ -47,6 +92,20 @@ def resource_path(relative_path):
         # Fallback to current directory
         return os.path.join(os.path.abspath("."), relative_path)
 
+def load_secure_env():
+    """Load environment variables from encrypted file"""
+    decrypted_content = decrypt_env_file()
+    if not decrypted_content:
+        QtWidgets.QMessageBox.critical(None, "Error", "Failed to decrypt configuration")
+        raise SystemExit
+    
+    # Parse the decrypted content into environment variables
+    for line in decrypted_content.splitlines():
+        line = line.strip()
+        if line and not line.startswith('#'):
+            key, value = line.split('=', 1)
+            os.environ[key] = value
+
 
 def log_button_press(button_name):
     """Log button presses with timestamp to a CSV file."""
@@ -70,43 +129,51 @@ def log_button_press(button_name):
 
 
 def update_env_file(new_gen_pass):
-    """Update the GEN_PASS in the .env file."""
+    """Update the GEN_PASS in the encrypted .env file"""
     try:
-        env_path = resource_path(".env")
-        # Read existing .env file
-        if os.path.exists(env_path):
-            with open(env_path, "r") as file:
-                lines = file.readlines()
-        else:
-            lines = []
+        # Get current decrypted content
+        decrypted_content = decrypt_env_file()
+        if not decrypted_content:
+            return False
         
-        # Update or add GEN_PASS line
+        # Update the GEN_PASS line
+        lines = decrypted_content.splitlines()
         updated = False
         new_lines = []
+        
         for line in lines:
             if line.startswith("GEN_PASS="):
-                new_lines.append(f"GEN_PASS={new_gen_pass}\n")
+                new_lines.append(f"GEN_PASS={new_gen_pass}")
                 updated = True
             else:
                 new_lines.append(line)
         
         if not updated:
-            new_lines.append(f"GEN_PASS={new_gen_pass}\n")
+            new_lines.append(f"GEN_PASS={new_gen_pass}")
         
-        # Write back to .env file
-        with open(env_path, "w") as file:
-            file.writelines(new_lines)
+        # Re-encrypt the updated content
+        cipher_suite = Fernet(ENCRYPTION_KEY)
+        encrypted_data = cipher_suite.encrypt('\n'.join(new_lines).encode())
         
-        # Reload environment variables
-        load_dotenv(env_path, override=True)
+        with open(resource_path('.env.enc'), 'wb') as file:
+            file.write(encrypted_data)
+        
+        # Update in-memory environment
+        os.environ["GEN_PASS"] = new_gen_pass
         return True
+        
     except Exception as e:
-        print(f"Error updating .env file: {e}")
+        print(f"Error updating encrypted env: {e}")
         return False
 
 
-
-load_dotenv()
+# If this is the first run and you have a plain .env file
+if os.path.exists(resource_path('.env')) and not os.path.exists(resource_path('.env.enc')):
+    if encrypt_env_file():
+        print("Successfully encrypted .env file")
+    else:
+        print("Failed to encrypt .env file")
+load_secure_env()
 COUPON_FILE = resource_path("fuffin.json")
 PASSWORD = os.getenv("PASSWORD")  # Set your password here
 GENERATION_PASSWORD = os.getenv("GEN_PASS")  # Set your password for generating coupons
