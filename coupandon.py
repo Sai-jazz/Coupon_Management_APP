@@ -274,13 +274,13 @@ class CouponManager(QtWidgets.QWidget):
         self.generate_btn.clicked.connect(self.generate_coupon)
         self.generate_btn.adjustSize()
         
-        self.generate_50_btn = QtWidgets.QPushButton("Generate 50 Coupons", self)
-        self.generate_50_btn.setFixedSize(150, 40)  # Width: 150px, Height: 40px
-        self.generate_50_btn.clicked.connect(self.generate_50_coupons)
+        self.generate_100_btn = QtWidgets.QPushButton("Generate 100 Coupons", self)
+        self.generate_100_btn.setFixedSize(180, 40)  # Width: 150px, Height: 40px
+        self.generate_100_btn.clicked.connect(self.generate_100_coupons)
        
         h1_layout = QtWidgets.QHBoxLayout() #create horizontal layout
         h1_layout.addWidget(self.generate_btn)
-        h1_layout.addWidget(self.generate_50_btn) 
+        h1_layout.addWidget(self.generate_100_btn) 
 
         self.group_box1.setLayout(h1_layout) #set layout for group box
         self.layout.addWidget(self.group_box1)
@@ -321,6 +321,7 @@ class CouponManager(QtWidgets.QWidget):
         self.remove_unshared_btn = QtWidgets.QPushButton("Remove Unshared Coupons", self)
         self.remove_unshared_btn.setFixedSize(250, 40)  # Width: 150px, Height: 40px
         self.remove_unshared_btn.clicked.connect(self.remove_unshared_coupons)
+        self.remove_unshared_btn.setStyleSheet(button_style)
         
         h2_layout = QtWidgets.QHBoxLayout() #create horizontal layout
         h2_layout.addWidget(self.remove_used_btn)
@@ -335,7 +336,14 @@ class CouponManager(QtWidgets.QWidget):
         self.export_csv_btn.clicked.connect(self.export_to_csv)
         self.layout.addWidget(self.export_csv_btn)
 
-        #refresh button
+
+
+
+      
+      # Create refresh and help buttons layout
+        self.refresh_help_layout = QtWidgets.QHBoxLayout()
+        
+        # Refresh button
         self.refresh_btn = QtWidgets.QPushButton(self)
         self.refresh_btn.setIcon(QIcon("refresh.png"))
         self.refresh_btn.setStyleSheet(
@@ -356,14 +364,44 @@ class CouponManager(QtWidgets.QWidget):
             }
         """
         )
-        #styling the buttons
-        self.remove_unshared_btn.setStyleSheet(button_style)
-        
-        #set image path
         self.refresh_btn.setFixedSize(40, 40)
-        self.refresh_btn.clicked.connect(self.refresh_data)  # Calls refresh method
-        self.layout.addWidget(self.refresh_btn)
+        self.refresh_btn.clicked.connect(self.refresh_data)
+        self.refresh_help_layout.addWidget(self.refresh_btn)
         
+        # Help button
+        self.help_btn = QtWidgets.QPushButton("Help", self)
+        self.help_btn.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #f0f0f0;
+                color: black;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding: 5px 10px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QPushButton:pressed {
+                background-color: #d0d0d0;
+            }
+        """
+        )
+        self.help_btn.setFixedSize(60, 40)
+        self.help_btn.clicked.connect(self.show_help_dialog)
+        self.refresh_help_layout.addStretch()  # This will push the help button to the right
+        self.refresh_help_layout.addWidget(self.help_btn)
+        
+        # Add the refresh-help layout to main layout
+        self.layout.addLayout(self.refresh_help_layout)
+
+       
+
+    # ... (keep all your existing methods including the new show_help_dialog and send_new_password methods)
+
+
+
+
         # Statistics Display
         self.stats_label = QtWidgets.QLabel("Statistics: Valid - 0 | Used - 0 | Expired - 0")
         self.stats_label.setFont(QtGui.QFont("Arial", 12))
@@ -386,6 +424,83 @@ class CouponManager(QtWidgets.QWidget):
         self.setLayout(self.layout)
         self.update_coupon_list()
         self.update_statistics()
+
+    def show_help_dialog(self):
+        """Show the help dialog with option to get new generation password"""
+        self.help_dialog = QtWidgets.QDialog(self)  # Store as instance variable
+        self.help_dialog.setWindowTitle("Help")
+        self.help_dialog.setModal(True)
+        
+        layout = QtWidgets.QVBoxLayout()
+        
+        # Message label
+        message = QtWidgets.QLabel("The Generation password has expired.To GET new password\n👇👇👇")
+        layout.addWidget(message)
+        
+        # Get New Pass button
+        get_pass_btn = QtWidgets.QPushButton("Get New Generation Password")
+        get_pass_btn.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3e8e41;
+            }
+            """
+        )
+        get_pass_btn.clicked.connect(self.send_new_password)  # Remove lambda
+        layout.addWidget(get_pass_btn)
+        
+        self.help_dialog.setLayout(layout)
+        self.help_dialog.exec_()
+
+    def send_new_password(self):
+        """Send the latest generation password via WhatsApp"""
+        try:
+            # Read the button_logs.csv file
+            log_file = resource_path("button_logs.csv")
+            if not os.path.exists(log_file):
+                QtWidgets.QMessageBox.warning(self, "Error", "CONTACT OWNER!!!")
+                return
+            
+            # Find the latest "Generate" entry
+            latest_entry = None
+            with open(log_file, "r", encoding="utf-8") as file:
+                reader = csv.reader(file)
+                next(reader)  # Skip header
+                for row in reader:
+                    if "Generate" in row[0]:  # Look for generate entries
+                        latest_entry = row
+            
+            if not latest_entry:
+                QtWidgets.QMessageBox.warning(self, "Error", "the password is not changed")
+                return
+            
+            
+            # Create WhatsApp message
+            message = f"New Generation Password Request\n\nLatest generation timestamp: {latest_entry[1]}"
+            encoded_message = message.replace(" ", "%20").replace("\n", "%0A")
+            url = f"https://api.whatsapp.com/send?phone=919014190770&text={encoded_message}"
+            
+            # Open WhatsApp
+            webbrowser.open(url)
+            
+            QtWidgets.QMessageBox.information(self, "NOTICE SENT", "the new password will be sent shortly.")
+            
+            # Close the help dialog after successful operation
+            if hasattr(self, 'help_dialog') and self.help_dialog:
+                self.help_dialog.close()
+            
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(self, "Error", f"Failed to send password: {str(e)}")
     
     def get_expiry_days(self):
         """Prompt the user to enter the number of days until the coupon expires."""
@@ -402,7 +517,7 @@ class CouponManager(QtWidgets.QWidget):
             return
 
         # Ask for the number of coupons to generate
-        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=50, value=50)
+        num_coupons, ok = QtWidgets.QInputDialog.getInt(self, "Number of Coupons", "Enter the number of coupons to generate:", min=1, max=100, value=100)
         if not ok or num_coupons < 1:
             return  # User canceled or entered an invalid number
 
@@ -456,10 +571,10 @@ class CouponManager(QtWidgets.QWidget):
         GENERATION_PASSWORD = new_pass
        
 
-    def generate_50_coupons(self):
+    def generate_100_coupons(self):
         global GENERATION_PASSWORD
         
-        if not self.authenticate(GENERATION_PASSWORD, "Generate 50 Coupons Authentication"):
+        if not self.authenticate(GENERATION_PASSWORD, "Generate 100 Coupons Authentication"):
             QtWidgets.QMessageBox.warning(self, "Access Denied", "Incorrect password!")
             return
         
@@ -483,7 +598,7 @@ class CouponManager(QtWidgets.QWidget):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         expiry_date = (datetime.now() + timedelta(days=expiry_days)).strftime("%Y-%m-%d %H:%M:%S")
         new_coupons = []
-        for _ in range(50):
+        for _ in range(100):
             coupon_code = str(uuid.uuid4())[:8].upper()
             coupons[coupon_code] = {
                 "status": "Valid", 
@@ -501,7 +616,7 @@ class CouponManager(QtWidgets.QWidget):
 
         #new passkey
         new_pass = generate_new_password()
-        log_button_press("Generate 50 Coupons")
+        log_button_press("Generate 100 Coupons")
         if not update_env_file(new_pass):
             QtWidgets.QMessageBox.warning(self,"Error","Failed to update genaration password")
 
