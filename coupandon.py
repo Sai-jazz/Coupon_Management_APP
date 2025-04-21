@@ -69,7 +69,8 @@ def resource_path(relative_path):
         if getattr(sys, 'frozen', False):
             # For data files that need to be writable (like JSON)
             if (relative_path.endswith('.json') or relative_path.endswith('.csv') or 
-            relative_path.endswith('.env')):
+            relative_path.endswith('.env')or 
+            relative_path.endswith('.enc')):
                 # Use the directory where the executable resides
                 base_path = os.path.dirname(sys.executable)
             else:
@@ -81,7 +82,8 @@ def resource_path(relative_path):
         
         # Create directory if it doesn't exist (only for JSON/data files)
         if (relative_path.endswith('.json') or relative_path.endswith('.csv') or 
-            relative_path.endswith('.env')):
+            relative_path.endswith('.env')or relative_path.endswith('.enc')
+            ):
             os.makedirs(base_path, exist_ok=True)
         
         full_path = os.path.join(base_path, relative_path)
@@ -653,20 +655,29 @@ class CouponManager(QtWidgets.QWidget):
             self.share_coupons(coupon_codes)
     
     def share_coupons(self, coupon_codes):
-        """Share the coupons via WhatsApp."""
-        message = "Hey! You know there's a restaurant near you with great food. Let me give you a coupon so you can enjoy it with your friends.  \nHurryup! Valid for only few days\n\n" 
-        coupon_text = "\n".join(coupon_codes)
+        """Share the coupons via WhatsApp with their expiry dates."""
+        message = "Hey! You know there's a restaurant near you with great food.\nHurry up! These coupons are valid only until their expiry dates.\n\n"
+        
+        # Create formatted coupon list with expiry dates
+        coupon_list = []
+        for code in coupon_codes:
+            if code in coupons:
+                expiry_date = datetime.strptime(coupons[code]["expiry"], "%Y-%m-%d %H:%M:%S").strftime("%d %b %Y")
+                coupon_list.append(f"{code} (Valid until: {expiry_date})")
+        
+        coupon_text = "\n".join(coupon_list)
         full_text = message + coupon_text
         full_text = full_text.replace(" ", "%20").replace("\n", "%0A")
         url = f"https://api.whatsapp.com/send?text={full_text}"
         webbrowser.open(url)
         
+        # Mark coupons as shared
         for code in coupon_codes:
             if code in coupons:
                 coupons[code]["shared"] = True
         save_coupons(coupons)
         self.update_coupon_list()
-    
+        
     def validate_coupon(self):
         code = self.coupon_entry.text().strip().upper()
         if code in coupons:
